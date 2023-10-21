@@ -1,6 +1,6 @@
 package br.com.cardoso.controller;
 
-import br.com.cardoso.exception.BaseUrlConfigNotFound;
+import br.com.cardoso.exception.ConfigurationNotFound;
 import br.com.cardoso.model.Token;
 import br.com.cardoso.service.TestRestClientService;
 import org.slf4j.Logger;
@@ -36,7 +36,7 @@ public class TestController {
     }
 
     @GetMapping("/restclient")
-    public String restClient() throws BaseUrlConfigNotFound {
+    public String restClient() throws ConfigurationNotFound {
         MDC.put("correlationId", UUID.randomUUID().toString());
         return testRestClientService.getTest();
     }

@@ -1,6 +1,6 @@
 package br.com.cardoso.core;
 
-import br.com.cardoso.exception.BaseUrlConfigNotFound;
+import br.com.cardoso.exception.ConfigurationNotFound;
 import br.com.cardoso.initializer.TokenInitializer;
 import org.springframework.core.env.Environment;
 import org.springframework.web.client.RestClient;
@@ -11,38 +11,41 @@ public class RestClientService {
 
     private final Environment environment;
     private final RestClient defaultRestClient;
-
-    private RestClient restClient;
     private String identifier;
-    private String baseUrl;
+    private boolean generateToken;
 
     public RestClientService(Environment environment, RestClient defaultRestClient) {
         this.environment = environment;
         this.defaultRestClient = defaultRestClient;
     }
 
-    public RestClientService identifier(String identifier) throws BaseUrlConfigNotFound {
+    public RestClientService identifier(String identifier) {
         this.identifier = identifier;
-        String configKey = identifier + ".api.uri";
-        this.baseUrl = environment.getProperty(configKey);
-        if (baseUrl == null) {
-            throw new BaseUrlConfigNotFound(MessageFormat.format("Configuration {} not found", configKey));
-        }
-        this.restClient = this.defaultRestClient.mutate().baseUrl(baseUrl).build();
         return this;
     }
 
-    public RestClient restClient() {
-        return this.restClient;
+    public RestClient restClient() throws ConfigurationNotFound {
+        String configKeyBaseUrl = identifier + ".api.uri";
+        String baseUrl = getEnvConfig(configKeyBaseUrl);
+        RestClient.Builder builder = this.defaultRestClient.mutate().baseUrl(baseUrl);
+        if(generateToken) {
+            String configKeyAuthBaseUrl = identifier + ".auth.api.uri";
+            String configValueAuthBaseUrl = getEnvConfig(configKeyAuthBaseUrl);
+            builder.requestInitializer(new TokenInitializer(configValueAuthBaseUrl));
+        }
+        return builder.build();
     }
 
-    public RestClientService generateToken() throws BaseUrlConfigNotFound {
-        String configKey = identifier + ".auth.api.uri";
-        String authBaseUrl = environment.getProperty(configKey);
-        if (authBaseUrl == null) {
-            throw new BaseUrlConfigNotFound(MessageFormat.format("Configuration {} not found", configKey));
-        }
-        this.restClient = this.defaultRestClient.mutate().requestInitializer(new TokenInitializer(authBaseUrl)).baseUrl(baseUrl).build();
+    public RestClientService generateToken() {
+        this.generateToken = true;
         return this;
+    }
+
+    private String getEnvConfig(String configKey) throws ConfigurationNotFound {
+        String configValue = environment.getProperty(configKey);
+        if (configValue == null) {
+            throw new ConfigurationNotFound(MessageFormat.format("Configuration {0} not found", configKey));
+        }
+        return configValue;
     }
 }
