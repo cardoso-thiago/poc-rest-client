@@ -7,6 +7,7 @@ import br.com.cardoso.custom.CustomInitializer2;
 import br.com.cardoso.exception.ConfigurationNotFound;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 
 import java.text.MessageFormat;
@@ -46,6 +47,10 @@ public class TestRestClientService {
                 .get()
                 .uri("/test")
                 .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, (request, response) -> {
+                    throw new RuntimeException(MessageFormat.format("Erro, status code {0} e headers: {1}",
+                            response.getStatusCode(), response.getHeaders()));
+                })
                 .body(String.class);
     }
 }
